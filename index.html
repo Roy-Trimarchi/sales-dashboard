@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Sales Activity Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f4;
+    --bg-tertiary: #f0efed;
+    --border: rgba(0,0,0,0.12);
+    --border-mid: rgba(0,0,0,0.2);
+    --text: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --text-tertiary: #9a9a9a;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --blue-dark: #0C447C;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #085041;
+    --red: #D85A30;
+    --red-light: #FAECE7;
+    --amber: #EF9F27;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-tertiary);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 3rem;
+  }
+
+  .top-bar {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 10px; }
+  .top-bar-left h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+  .top-bar-left .logo { font-size: 20px; }
+  .top-bar-right { font-size: 13px; color: var(--text-secondary); }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 9px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-weight: 500;
+  }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .card.submitted { border-color: var(--green); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .av-0 { background: #E6F1FB; color: #0C447C; }
+  .av-1 { background: var(--green-light); color: var(--green-dark); }
+  .av-2 { background: #EEEDFE; color: #3C3489; }
+  .av-3 { background: #FAEEDA; color: #633806; }
+  .av-4 { background: #FBEAF0; color: #72243E; }
+  .av-5 { background: var(--red-light); color: #712B13; }
+
+  .sp-name { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+
+  .submitted-badge {
+    font-size: 11px;
+    background: var(--green-light);
+    color: var(--green-dark);
+    padding: 3px 9px;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    display: none;
+  }
+  .card.submitted .submitted-badge { display: inline-block; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 12px 0 7px;
+  }
+
+  .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--text-secondary); }
+  .field input {
+    width: 100%;
+    padding: 7px 8px;
+    font-size: 14px;
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text);
+    text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+  .field input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .rates-block { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .rate-row { display: flex; flex-direction: column; gap: 3px; }
+  .rate-info { display: flex; justify-content: space-between; font-size: 12px; }
+  .rate-name { color: var(--text-secondary); }
+  .rate-val { font-weight: 600; }
+  .rate-val.hit { color: var(--green); }
+  .rate-val.miss { color: var(--red); }
+  .rate-val.na { color: var(--text-tertiary); }
+  .bar-bg { height: 5px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .bar-fill.hit { background: var(--green); }
+  .bar-fill.miss { background: var(--red); }
+
+  .card-footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress-wrap { flex: 1; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+  .progress-info .ps { font-weight: 600; color: var(--text); }
+  .progress-bar-bg { height: 6px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 3px; background: var(--blue); transition: width 0.3s; }
+  .progress-bar-fill.on-track { background: var(--green); }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-mid);
+    background: var(--bg);
+    color: var(--text);
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--bg-secondary); }
+  .btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.primary:hover { background: var(--blue-dark); }
+  .btn.success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn.success:hover { background: var(--green-dark); }
+  .btn.danger { background: #fff; color: var(--red); border-color: var(--red); }
+  .btn.danger:hover { background: var(--red-light); }
+
+  .card.submitted .submit-btn { display: none; }
+  .card.submitted .edit-btn { display: inline-block; }
+  .edit-btn { display: none; }
+
+  .summary-bar {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.25rem;
+    margin-top: 1.5rem;
+  }
+  .summary-bar h2 { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .summary-cell { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.65rem 0.75rem; }
+  .summary-cell .s-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .summary-cell .s-val { font-size: 22px; font-weight: 600; color: var(--text); }
+
+  .action-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap; }
+
+  /* Weekly view */
+  .weekly-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 14px;
+  }
+  .weekly-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .weekly-name { font-size: 15px; font-weight: 600; flex: 1; }
+  .weekly-sold-tag { font-size: 12px; color: var(--text-secondary); }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .metric-cell { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.7rem 0.85rem; }
+  .metric-cell .mc-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
+  .metric-cell .mc-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  .metric-cell .mc-val { font-size: 20px; font-weight: 600; }
+  .mc-val.hit { color: var(--green); }
+  .mc-val.miss { color: var(--red); }
+  .mc-val.neutral { color: var(--text); }
+  .metric-cell .mc-target { font-size: 12px; color: var(--text-tertiary); }
+  .metric-cell .mc-bar-bg { height: 5px; border-radius: 3px; background: var(--bg); overflow: hidden; }
+  .metric-cell .mc-bar-fill { height: 100%; border-radius: 3px; }
+  .mc-bar-fill.hit { background: var(--green); }
+  .mc-bar-fill.miss { background: var(--red); }
+  .mc-bar-fill.neutral { background: var(--blue); }
+  .weekly-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+  .weekly-meta span { font-size: 12px; color: var(--text-secondary); }
+  .weekly-meta strong { color: var(--text); }
+
+  .week-note { font-size: 12px; color: var(--text-tertiary); margin-top: 1rem; text-align: center; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--text);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--red); }
+  .toast.success { background: var(--green); }
+
+  /* Setup banner */
+  .setup-banner {
+    background: #FFF8E6;
+    border: 1px solid #EF9F27;
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.25rem;
+    font-size: 13px;
+    color: #633806;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .setup-banner a { color: var(--blue); font-weight: 500; cursor: pointer; text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    .metric-grid { grid-template-columns: 1fr 1fr; }
+    .top-bar { padding: 0.85rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <span class="logo">🚗</span>
+    <h1>Daily Sales Activity</h1>
+  </div>
+  <div class="top-bar-right" id="date-display"></div>
+</div>
+
+<div class="container">
+
+  <div class="setup-banner" id="setup-banner">
+    ⚠️ Google Sheets not connected yet. Data will not be saved between sessions.
+    <a onclick="showSetup()">Connect Google Sheets →</a>
+  </div>
+
+  <!-- Setup modal backdrop -->
+  <div id="setup-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; align-items:center; justify-content:center;">
+    <div style="background:var(--bg); border-radius:var(--radius-lg); padding:1.5rem; max-width:480px; width:90%; position:relative;">
+      <h2 style="font-size:16px; font-weight:600; margin-bottom:0.5rem;">Connect Google Sheets</h2>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:1rem; line-height:1.6;">
+        Paste your Google Apps Script Web App URL below. See the included <strong>README</strong> for step-by-step setup instructions.
+      </p>
+      <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:5px;">Web App URL</label>
+      <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/..." 
+        style="width:100%; padding:8px 10px; font-size:13px; border:1px solid var(--border-mid); border-radius:var(--radius-md); margin-bottom:1rem; background:var(--bg-secondary);" />
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn" onclick="closeSetup()">Cancel</button>
+        <button class="btn primary" onclick="saveSheetUrl()">Save & connect</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-row">
+    <button class="tab active" onclick="switchTab('daily')">📋 Daily entry</button>
+    <button class="tab" onclick="switchTab('weekly')">📊 Weekly view</button>
+  </div>
+
+  <div class="view active" id="view-daily">
+    <div class="grid" id="cards-container"></div>
+    <div class="summary-bar">
+      <h2>Team totals today</h2>
+      <div class="summary-grid" id="summary-grid"></div>
+    </div>
+    <div class="action-row">
+      <button class="btn danger" onclick="clearAll()">↺ Clear all</button>
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn primary" onclick="copySummary()">📋 Copy summary</button>
+    </div>
+  </div>
+
+  <div class="view" id="view-weekly">
+    <div id="weekly-container"></div>
+    <div class="week-note">Weekly totals accumulate as daily entries are submitted each day.</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+// Paste your Google Apps Script Web App URL here after setup, OR use the
+// in-app "Connect Google Sheets" button.
+let SHEETS_URL = localStorage.getItem("sheetsUrl") || "";
+
+const salespeople = [
+  { name: "Kane Goodman",    initials: "KG", av: 0, weeklyTarget: 6 },
+  { name: "Adem Varir",      initials: "AV", av: 1, weeklyTarget: 6 },
+  { name: "Ben Orgill",      initials: "BO", av: 2, weeklyTarget: 6 },
+  { name: "John Sekulovski", initials: "JS", av: 3, weeklyTarget: 6 },
+  { name: "Molly O'Rourke",  initials: "MO", av: 4, weeklyTarget: 6 },
+  { name: "Rebin Basheer",   initials: "RB", av: 5, weeklyTarget: 6 }
+];
+
+const fields = [
+  { key: "web",       label: "Web enquiries",    group: "activity" },
+  { key: "phone",     label: "Phone calls",       group: "activity" },
+  { key: "walkin",    label: "Walk ins",          group: "activity" },
+  { key: "appt",      label: "Appointments made", group: "activity" },
+  { key: "testdrive", label: "Test drives",       group: "activity" },
+  { key: "sold",      label: "Vehicles sold",     group: "sales"    },
+  { key: "finance",   label: "Finance enquiries", group: "upsell"   },
+  { key: "warranty",  label: "Warranty upsells",  group: "upsell"   }
+];
+
+const RATES = [
+  { key: "appt_rate",     label: "Appt rate",     target: 40, num: "appt",    den: "leads" },
+  { key: "close_rate",    label: "Close rate",    target: 25, num: "sold",    den: "leads" },
+  { key: "finance_rate",  label: "Finance rate",  target: 40, num: "finance", den: "sold"  },
+  { key: "warranty_rate", label: "Warranty rate", target: 40, num: "warranty",den: "sold"  }
+];
+
+// weekTotals holds running weekly accumulation per person
+const weekTotals = salespeople.map(() => Object.fromEntries(fields.map(f => [f.key, 0])));
+const submitted  = salespeople.map(() => false);
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+function getVal(i, key) {
+  const el = document.getElementById(`${i}_${key}`);
+  return el ? (parseInt(el.value) || 0) : 0;
+}
+function getDailyData(i) {
+  return Object.fromEntries(fields.map(f => [f.key, getVal(i, f.key)]));
+}
+function totalLeads(d) { return d.web + d.phone + d.walkin; }
+function calcRate(num, den) { return den === 0 ? null : Math.round((num / den) * 100); }
+function rateClass(val, target) { return val === null ? "na" : val >= target ? "hit" : "miss"; }
+
+function showToast(msg, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (type ? " " + type : "");
+  setTimeout(() => { t.className = "toast"; }, 3000);
+}
+
+function todayStr() {
+  return new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+function isoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ─── SETUP / SHEETS ────────────────────────────────────────────────────────
+function showSetup() {
+  document.getElementById("sheets-url-input").value = SHEETS_URL;
+  document.getElementById("setup-modal").style.display = "flex";
+}
+function closeSetup() {
+  document.getElementById("setup-modal").style.display = "none";
+}
+function saveSheetUrl() {
+  const val = document.getElementById("sheets-url-input").value.trim();
+  if (!val.startsWith("https://script.google.com")) {
+    showToast("That doesn't look like a valid Apps Script URL.", "error");
+    return;
+  }
+  SHEETS_URL = val;
+  localStorage.setItem("sheetsUrl", val);
+  closeSetup();
+  updateBanner();
+  showToast("Google Sheets connected ✓", "success");
+}
+function updateBanner() {
+  const banner = document.getElementById("setup-banner");
+  if (SHEETS_URL) {
+    banner.style.background = "#E1F5EE";
+    banner.style.borderColor = "#1D9E75";
+    banner.style.color = "#085041";
+    banner.innerHTML = `✓ Connected to Google Sheets. <a onclick="showSetup()">Change URL</a>`;
+  }
+}
+
+async function sendToSheets(payload) {
+  if (!SHEETS_URL) return;
+  try {
+    await fetch(SHEETS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    showToast("Could not reach Google Sheets. Check your URL.", "error");
+  }
+}
+
+// ─── RENDER RATES ──────────────────────────────────────────────────────────
+function renderRates(i, data) {
+  const leads = totalLeads(data);
+  RATES.forEach(r => {
+    const el  = document.getElementById(`rate_${i}_${r.key}`);
+    const bar = document.getElementById(`ratebar_${i}_${r.key}`);
+    if (!el) return;
+    const num = data[r.num];
+    const den = r.den === "leads" ? leads : data.sold;
+    const val = calcRate(num, den);
+    const cls = rateClass(val, r.target);
+    el.textContent = val === null ? "—" : val + "%";
+    el.className = "rate-val " + cls;
+    if (bar) {
+      bar.style.width = (val === null ? 0 : Math.min((val / r.target) * 100, 100)) + "%";
+      bar.className = "bar-fill " + (val === null ? "miss" : cls);
+    }
+  });
+}
+
+// ─── PROGRESS BAR ──────────────────────────────────────────────────────────
+function updateProgress(i) {
+  const daily = getDailyData(i);
+  const weeklySold = weekTotals[i].sold + (submitted[i] ? 0 : daily.sold);
+  const target = salespeople[i].weeklyTarget;
+  const pct = Math.min((weeklySold / target) * 100, 100);
+  const fill = document.getElementById(`pfill_${i}`);
+  const ps   = document.getElementById(`psold_${i}`);
+  const pt   = document.getElementById(`ptgt_${i}`);
+  if (!fill) return;
+  fill.style.width = pct + "%";
+  fill.className = "progress-bar-fill" + (weeklySold >= target ? " on-track" : "");
+  ps.textContent  = weeklySold + " sold this week";
+  pt.textContent  = "Target: " + target;
+}
+
+// ─── TEAM TOTALS ───────────────────────────────────────────────────────────
+function updateTotals() {
+  const sg = document.getElementById("summary-grid");
+  sg.innerHTML = "";
+  fields.forEach(f => {
+    let t = 0;
+    salespeople.forEach((_, i) => { t += getVal(i, f.key); });
+    const cell = document.createElement("div");
+    cell.className = "summary-cell";
+    cell.innerHTML = `<div class="s-label">${f.label}</div><div class="s-val">${t}</div>`;
+    sg.appendChild(cell);
+  });
+  salespeople.forEach((_, i) => {
+    renderRates(i, getDailyData(i));
+    updateProgress(i);
+  });
+}
+
+// ─── SUBMIT / EDIT ─────────────────────────────────────────────────────────
+async function submitCard(i) {
+  const daily = getDailyData(i);
+  fields.forEach(f => { weekTotals[i][f.key] += daily[f.key]; });
+  submitted[i] = true;
+
+  const card = document.getElementById(`card-${i}`);
+  card.classList.add("submitted");
+  fields.forEach(f => {
+    const el = document.getElementById(`${i}_${f.key}`);
+    if (el) el.disabled = true;
+  });
+
+  updateProgress(i);
+  updateTotals();
+  renderWeekly();
+
+  // Send to Google Sheets
+  const leads = totalLeads(daily);
+  const payload = {
+    date:          isoDate(),
+    salesperson:   salespeople[i].name,
+    web:           daily.web,
+    phone:         daily.phone,
+    walkin:        daily.walkin,
+    total_leads:   leads,
+    appointments:  daily.appt,
+    test_drives:   daily.testdrive,
+    vehicles_sold: daily.sold,
+    finance:       daily.finance,
+    warranty:      daily.warranty,
+    appt_rate:     calcRate(daily.appt, leads),
+    close_rate:    calcRate(daily.sold, leads),
+    finance_rate:  calcRate(daily.finance, daily.sold),
+    warranty_rate: calcRate(daily.warranty, daily.sold),
+    weekly_sold:   weekTotals[i].sold,
+    weekly_target: salespeople[i].weeklyTarget
+  };
+
+  await sendToSheets(payload);
+  showToast(SHEETS_URL ? `${salespeople[i].name} submitted & saved ✓` : `${salespeople[i].name} submitted ✓`, "success");
+}
+
+function editCard(i) {
+  fields.forEach(f => { weekTotals[i][f.key] -= getVal(i, f.key); });
+  submitted[i] = false;
+  const card = document.getElementById(`card-${i}`);
+  card.classList.remove("submitted");
+  fields.forEach(f => {
+    const el = document.getElementById(`${i}_${f.key}`);
+    if (el) el.disabled = false;
+  });
+  updateProgress(i);
+  updateTotals();
+  renderWeekly();
+}
+
+// ─── BUILD CARDS ───────────────────────────────────────────────────────────
+function buildCards() {
+  const container = document.getElementById("cards-container");
+  salespeople.forEach((sp, i) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.id = `card-${i}`;
+
+    const actF   = fields.filter(f => f.group === "activity");
+    const salesF = fields.filter(f => f.group === "sales");
+    const upF    = fields.filter(f => f.group === "upsell");
+
+    let html = `
+      <div class="card-header">
+        <div class="avatar av-${sp.av}">${sp.initials}</div>
+        <div class="sp-name">${sp.name}</div>
+        <span class="submitted-badge">✓ Submitted</span>
+      </div>
+      <div class="section-label">Activity</div>
+      <div class="field-group">`;
+    actF.forEach(f => {
+      html += `<div class="field"><label>${f.label}</label><input type="number" min="0" id="${i}_${f.key}" placeholder="0" oninput="updateTotals()" /></div>`;
+    });
+    html += `</div><div class="section-label">Sales</div><div class="field-group">`;
+    salesF.forEach(f => {
+      html += `<div class="field"><label>${f.label}</label><input type="number" min="0" id="${i}_${f.key}" placeholder="0" oninput="updateTotals()" /></div>`;
+    });
+    html += `</div><div class="section-label">Finance & protection</div><div class="field-group">`;
+    upF.forEach(f => {
+      html += `<div class="field"><label>${f.label}</label><input type="number" min="0" id="${i}_${f.key}" placeholder="0" oninput="updateTotals()" /></div>`;
+    });
+    html += `</div><div class="section-label">Today's conversion rates</div><div class="rates-block">`;
+    RATES.forEach(r => {
+      html += `<div class="rate-row">
+        <div class="rate-info">
+          <span class="rate-name">${r.label} <span style="font-size:10px;">(target ${r.target}%)</span></span>
+          <span class="rate-val na" id="rate_${i}_${r.key}">—</span>
+        </div>
+        <div class="bar-bg"><div class="bar-fill miss" id="ratebar_${i}_${r.key}" style="width:0%"></div></div>
+      </div>`;
+    });
+    html += `</div>
+      <div class="card-footer">
+        <div class="progress-wrap">
+          <div class="progress-info">
+            <span class="ps" id="psold_${i}">0 sold this week</span>
+            <span id="ptgt_${i}">Target: ${sp.weeklyTarget}</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="pfill_${i}" style="width:0%"></div></div>
+        </div>
+        <button class="btn success submit-btn" onclick="submitCard(${i})">✓ Submit</button>
+        <button class="btn edit-btn" onclick="editCard(${i})">✎ Edit</button>
+      </div>`;
+
+    card.innerHTML = html;
+    container.appendChild(card);
+  });
+}
+
+// ─── WEEKLY VIEW ───────────────────────────────────────────────────────────
+function renderWeekly() {
+  const container = document.getElementById("weekly-container");
+  container.innerHTML = "";
+  salespeople.forEach((sp, i) => {
+    const wt    = weekTotals[i];
+    const leads = totalLeads(wt);
+
+    const apptRate    = calcRate(wt.appt,    leads);
+    const closeRate   = calcRate(wt.sold,    leads);
+    const financeRate = calcRate(wt.finance, wt.sold);
+    const warrantyRate= calcRate(wt.warranty,wt.sold);
+
+    function mCell(label, val, target, isRate) {
+      const display = isRate ? (val === null ? "—" : val + "%") : val;
+      const tDisp   = isRate ? target + "%" : target;
+      const pct     = isRate
+        ? (val === null ? 0 : Math.min(Math.round((val / target) * 100), 100))
+        : Math.min(Math.round((val / target) * 100), 100);
+      const cls     = isRate
+        ? (val === null ? "miss" : val >= target ? "hit" : "miss")
+        : (val >= target ? "hit" : "neutral");
+      return `<div class="metric-cell">
+        <div class="mc-label">${label}</div>
+        <div class="mc-row">
+          <span class="mc-val ${cls}">${display}</span>
+          <span class="mc-target">Target: ${tDisp}</span>
+        </div>
+        <div class="mc-bar-bg"><div class="mc-bar-fill ${cls}" style="width:${pct}%"></div></div>
+      </div>`;
+    }
+
+    const card = document.createElement("div");
+    card.className = "weekly-card";
+    card.innerHTML = `
+      <div class="weekly-header">
+        <div class="avatar av-${sp.av}">${sp.initials}</div>
+        <div class="weekly-name">${sp.name}</div>
+        <span class="weekly-sold-tag">${wt.sold} / ${sp.weeklyTarget} sold</span>
+      </div>
+      <div class="metric-grid">
+        ${mCell("Vehicles sold", wt.sold, sp.weeklyTarget, false)}
+        ${mCell("Appt rate vs leads", apptRate, 40, true)}
+        ${mCell("Close rate vs leads", closeRate, 25, true)}
+        ${mCell("Finance rate", financeRate, 40, true)}
+        ${mCell("Warranty rate", warrantyRate, 40, true)}
+      </div>
+      <div class="weekly-meta">
+        <span>Total leads: <strong>${leads}</strong></span>
+        <span>Web: <strong>${wt.web}</strong></span>
+        <span>Phone: <strong>${wt.phone}</strong></span>
+        <span>Walk ins: <strong>${wt.walkin}</strong></span>
+        <span>Test drives: <strong>${wt.testdrive}</strong></span>
+        <span>Finance: <strong>${wt.finance}</strong></span>
+        <span>Warranty: <strong>${wt.warranty}</strong></span>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+// ─── EXPORT / CLEAR ────────────────────────────────────────────────────────
+function clearAll() {
+  if (!confirm("Clear all entries and reset weekly totals?")) return;
+  salespeople.forEach((_, i) => {
+    submitted[i] = false;
+    fields.forEach(f => { weekTotals[i][f.key] = 0; });
+    const card = document.getElementById(`card-${i}`);
+    card.classList.remove("submitted");
+    fields.forEach(f => {
+      const el = document.getElementById(`${i}_${f.key}`);
+      if (el) { el.value = ""; el.disabled = false; }
+    });
+  });
+  updateTotals();
+  renderWeekly();
+}
+
+function exportCSV() {
+  const headers = ["Date","Salesperson","Web","Phone","Walk Ins","Total Leads","Appointments","Test Drives","Vehicles Sold","Finance","Warranty","Appt Rate %","Close Rate %","Finance Rate %","Warranty Rate %","Weekly Sold","Weekly Target"];
+  const rows = [headers.join(",")];
+  salespeople.forEach((sp, i) => {
+    const d = getDailyData(i);
+    const leads = totalLeads(d);
+    const row = [
+      isoDate(), `"${sp.name}"`,
+      d.web, d.phone, d.walkin, leads,
+      d.appt, d.testdrive, d.sold, d.finance, d.warranty,
+      calcRate(d.appt, leads) ?? "",
+      calcRate(d.sold, leads) ?? "",
+      calcRate(d.finance, d.sold) ?? "",
+      calcRate(d.warranty, d.sold) ?? "",
+      weekTotals[i].sold, sp.weeklyTarget
+    ];
+    rows.push(row.join(","));
+  });
+  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `sales-${isoDate()}.csv`;
+  a.click();
+  showToast("CSV downloaded ✓", "success");
+}
+
+function copySummary() {
+  const lines = [`Daily sales summary — ${todayStr()}`, ""];
+  salespeople.forEach((sp, i) => {
+    const d = getDailyData(i);
+    const leads = totalLeads(d);
+    lines.push(`${sp.name}${submitted[i] ? " ✓" : ""}`);
+    fields.forEach(f => { if (d[f.key] > 0) lines.push(`  ${f.label}: ${d[f.key]}`); });
+    lines.push(`  Weekly sold: ${weekTotals[i].sold} / ${sp.weeklyTarget}`);
+    lines.push(`  Appt rate: ${calcRate(d.appt, leads) ?? "—"}% (target 40%)`);
+    lines.push(`  Close rate: ${calcRate(d.sold, leads) ?? "—"}% (target 25%)`);
+    lines.push(`  Finance rate: ${calcRate(d.finance, d.sold) ?? "—"}% (target 40%)`);
+    lines.push(`  Warranty rate: ${calcRate(d.warranty, d.sold) ?? "—"}% (target 40%)`);
+    lines.push("");
+  });
+  navigator.clipboard.writeText(lines.join("\n"))
+    .then(() => showToast("Summary copied ✓", "success"))
+    .catch(() => showToast("Could not copy — try manual select.", "error"));
+}
+
+// ─── TAB SWITCH ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById(`view-${tab}`).classList.add("active");
+  document.querySelectorAll(".tab")[tab === "daily" ? 0 : 1].classList.add("active");
+  if (tab === "weekly") renderWeekly();
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById("date-display").textContent = todayStr();
+buildCards();
+updateTotals();
+renderWeekly();
+updateBanner();
+</script>
+</body>
+</html>
