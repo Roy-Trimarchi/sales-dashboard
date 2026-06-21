@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Albion Park Used — Daily Sales Dashboard</title>
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --paper:#FFFFFF;
+    --ink:#1A1A1A;
+    --ink-soft:#5B5D60;
+    --line:#E6E4DF;
+    --charcoal:#23262B;
+    --charcoal-soft:#3A3D43;
+    --red:#EB0A1E;
+    --red-soft:#FCE6E8;
+    --green:#1E7B45;
+    --green-soft:#E7F4EC;
+    --amber:#B5760A;
+    --amber-soft:#FBF1DF;
+    --gold:#C9A84C;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(20,20,20,.04), 0 4px 16px rgba(20,20,20,.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-feature-settings:'tnum' 1, 'cv02' 1;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:64px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+
+  /* HEADER */
+  header.top{
+    background:var(--charcoal);
+    color:#fff;
+    padding:28px 0 22px;
+    border-bottom:3px solid var(--red);
+  }
+  header.top .wrap{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;}
+  .brand{display:flex;flex-direction:column;gap:2px;}
+  .brand .eyebrow{
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--gold);font-weight:600;
+  }
+  .brand h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em;}
+  .brand .sub{color:#B9BBC0;font-size:13px;margin-top:2px;}
+  .date-pill{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:100px;padding:8px 16px;
+    font-size:13px;color:#EDEDEC;display:flex;align-items:center;gap:8px;
+  }
+  .date-pill strong{color:#fff;font-weight:600;}
+
+  nav.tabs{
+    display:flex;gap:4px;margin-top:20px;border-top:1px solid rgba(255,255,255,.1);padding-top:16px;flex-wrap:wrap;
+  }
+  nav.tabs button{
+    background:transparent;border:none;color:#B9BBC0;
+    font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:7px;
+    cursor:pointer;transition:all .15s ease;letter-spacing:.01em;
+  }
+  nav.tabs button:hover{background:rgba(255,255,255,.06);color:#fff;}
+  nav.tabs button.active{background:var(--red);color:#fff;}
+
+  main{padding-top:28px;}
+  section.view{display:none;}
+  section.view.active{display:block;}
+
+  h2.section-title{
+    font-size:13px;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--ink-soft);font-weight:700;margin:0 0 14px;
+  }
+
+  /* RECAP CARDS */
+  .recap-grid{
+    display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px;
+  }
+  @media(max-width:900px){.recap-grid{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:560px){.recap-grid{grid-template-columns:repeat(2,1fr);}}
+  .card{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 16px 14px;box-shadow:var(--shadow);
+  }
+  .card .label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .card .value{font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-0.02em;}
+  .card .value.neg{color:var(--red);}
+  .card .value.pos{color:var(--green);}
+  .card .delta{font-size:12px;margin-top:4px;font-weight:600;}
+  .card .delta.up{color:var(--green);}
+  .card .delta.down{color:var(--red);}
+  .card .delta.flat{color:var(--ink-soft);}
+
+  .mtd-strip{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px;
+  }
+  @media(max-width:980px){.mtd-strip{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:560px){.mtd-strip{grid-template-columns:1fr;}}
+  .mtd-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+  .mtd-card .label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .mtd-card .nums{display:flex;align-items:baseline;gap:6px;margin-top:6px;}
+  .mtd-card .nums .cur{font-size:22px;font-weight:700;}
+  .mtd-card .nums .tgt{font-size:13px;color:var(--ink-soft);}
+  .bar-track{height:8px;background:var(--line);border-radius:100px;margin-top:10px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:100px;transition:width .4s ease;}
+  .bar-fill.ok{background:var(--green);}
+  .bar-fill.warn{background:var(--amber);}
+  .bar-fill.bad{background:var(--red);}
+  .mtd-card .pct{font-size:11.5px;color:var(--ink-soft);margin-top:6px;font-weight:600;}
+
+  /* LEADERBOARD */
+  .table-wrap{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:var(--shadow);margin-bottom:32px;
+  }
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:680px;}
+  thead tr{background:var(--charcoal);}
+  thead th{
+    color:#D8D9DB;font-weight:600;text-align:left;padding:11px 14px;
+    font-size:11px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;
+  }
+  thead th.num, td.num{text-align:right;}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FBFAF7;}
+  tbody tr.totals{background:var(--charcoal);color:#fff;font-weight:700;}
+  tbody tr.totals td{border-bottom:none;}
+  .rank-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:6px;font-size:11.5px;font-weight:700;
+    background:var(--line);color:var(--ink-soft);
+  }
+  .rank-badge.r1{background:var(--gold);color:#fff;}
+  .rank-badge.r2{background:#C7C9CD;color:#3A3D43;}
+  .rank-badge.r3{background:#D8A77A;color:#fff;}
+  .pen-bar-wrap{display:flex;align-items:center;gap:8px;}
+  .pen-bar-track{width:64px;height:6px;background:var(--line);border-radius:100px;overflow:hidden;}
+  .pen-bar-fill{height:100%;background:var(--red);border-radius:100px;}
+
+  /* TREND */
+  .trend-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+  @media(max-width:900px){.trend-grid{grid-template-columns:repeat(2,1fr);}}
+  .trend-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+  .trend-card .label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .trend-card .row{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;}
+  .trend-card .row .k{font-size:12px;color:var(--ink-soft);}
+  .trend-card .row .v{font-size:14px;font-weight:700;}
+  .trend-card .row .v.up{color:var(--green);}
+  .trend-card .row .v.down{color:var(--red);}
+  #chartHolder{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:32px;}
+  #chartHolder svg{width:100%;height:auto;display:block;}
+
+  /* DEALS (collapsible) */
+  .deals-toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 18px;cursor:pointer;box-shadow:var(--shadow);
+  }
+  .deals-toggle .left{display:flex;align-items:center;gap:10px;}
+  .deals-toggle .left .icon{font-size:16px;}
+  .deals-toggle .left .txt strong{display:block;font-size:14px;}
+  .deals-toggle .left .txt span{font-size:12px;color:var(--ink-soft);}
+  .deals-toggle .chev{transition:transform .2s ease;color:var(--ink-soft);font-size:13px;}
+  .deals-toggle.open .chev{transform:rotate(180deg);}
+  #dealsTableWrap{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+  #dealsTableWrap.open{max-height:2000px;margin-top:10px;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:600;}
+  .pill.allocated{background:var(--red-soft);color:var(--red);}
+  .pill.cash{background:var(--ink-soft);background:#EEEEEE;color:var(--ink-soft);}
+
+  /* DATA ENTRY */
+  .entry-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);}
+  .entry-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media(max-width:760px){.entry-grid{grid-template-columns:repeat(2,1fr);}}
+  .field label{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+  .field input{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;
+    font-size:14px;font-family:inherit;background:#FCFCFB;
+  }
+  .field input:focus{outline:none;border-color:var(--red);background:#fff;}
+  .entry-actions{display:flex;gap:10px;margin-top:22px;}
+  button.primary{
+    background:var(--red);color:#fff;border:none;padding:11px 20px;border-radius:8px;
+    font-weight:600;font-size:13.5px;cursor:pointer;
+  }
+  button.secondary{
+    background:transparent;color:var(--ink-soft);border:1px solid var(--line);
+    padding:11px 20px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer;
+  }
+  button.primary:hover{background:#C8081A;}
+  button.secondary:hover{background:#F2F1ED;}
+  .rep-table-scroll{overflow-x:auto;padding-bottom:4px;}
+  .rep-row{display:grid;grid-template-columns:140px repeat(9,86px);gap:8px;margin-bottom:8px;align-items:center;width:max-content;min-width:100%;}
+  .rep-row.head{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:700;letter-spacing:.04em;}
+  .rep-row input{padding:7px 8px;font-size:12.5px;width:100%;}
+  .rep-row .name-cell{font-size:13px;font-weight:600;display:flex;align-items:center;}
+
+  .status-banner{
+    display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:8px;
+    font-size:13px;margin-bottom:18px;font-weight:500;
+  }
+  .status-banner.warn{background:var(--amber-soft);color:#8A5A06;}
+  .status-banner.ok{background:var(--green-soft);color:var(--green);}
+  .status-banner a{color:inherit;font-weight:700;text-decoration:underline;}
+
+  footer.foot{
+    max-width:1180px;margin:40px auto 0;padding:0 24px;
+    color:var(--ink-soft);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  }
+  .empty-state{
+    text-align:center;padding:60px 20px;color:var(--ink-soft);
+  }
+  .empty-state .big{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+  @media(min-width:760px){.scroll-hint{display:none;}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <span class="eyebrow">Albion Park Used · Toyota</span>
+      <h1>Daily Sales Dashboard</h1>
+      <span class="sub" id="lastUpdated">No data yet</span>
+    </div>
+    <div class="date-pill">📅 <strong id="todayLabel">—</strong></div>
+  </div>
+  <div class="wrap">
+    <nav class="tabs">
+      <button data-view="today" class="active">Yesterday</button>
+      <button data-view="mtd">MTD Progress</button>
+      <button data-view="trend">Trend</button>
+      <button data-view="entry">Daily Entry</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div id="connectBanner"></div>
+
+  <!-- TODAY VIEW -->
+  <section class="view active" id="view-today">
+    <div id="todayContent"></div>
+  </section>
+
+  <!-- MTD VIEW -->
+  <section class="view" id="view-mtd">
+    <h2 class="section-title">Month-to-date vs target</h2>
+    <div class="mtd-strip" id="mtdStrip"></div>
+    <h2 class="section-title">Targets</h2>
+    <div class="entry-card" style="margin-bottom:32px;">
+      <div class="entry-grid" id="targetFields"></div>
+      <p id="targetDerivedHint" style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;"></p>
+      <div class="entry-actions">
+        <button class="primary" id="saveTargets">Save targets</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TREND VIEW -->
+  <section class="view" id="view-trend">
+    <h2 class="section-title">Day-on-day &amp; week-on-week</h2>
+    <div class="trend-grid" id="trendGrid"></div>
+    <h2 class="section-title">Units sold — last 14 days</h2>
+    <div id="chartHolder"></div>
+  </section>
+
+  <!-- ENTRY VIEW -->
+  <section class="view" id="view-entry">
+    <h2 class="section-title">Add yesterday's End-of-Day figures</h2>
+    <div class="entry-card" style="margin-bottom:24px;">
+      <div class="entry-grid">
+        <div class="field"><label>Date</label><input type="date" id="f_date"></div>
+        <div class="field"><label>Sold</label><input type="number" id="f_soldToday" placeholder="6"></div>
+        <div class="field"><label>Gross $</label><input type="number" id="f_grossToday" placeholder="-2870"></div>
+        <div class="field"><label>Finance</label><input type="number" id="f_financeToday" placeholder="0"></div>
+        <div class="field"><label>Warranty</label><input type="number" id="f_warrantyToday" placeholder="0"></div>
+        <div class="field"><label>Trade-in</label><input type="number" id="f_tradeInToday" placeholder="1"></div>
+        <div class="field"><label>Online stock</label><input type="number" id="f_online" placeholder="89"></div>
+        <div class="field"><label>Total stock</label><input type="number" id="f_totalStock" placeholder="129"></div>
+        <div class="field"><label>Sold MTD</label><input type="number" id="f_soldMTD" placeholder="101"></div>
+        <div class="field"><label>Finance MTD</label><input type="number" id="f_financeMTD" placeholder="38"></div>
+        <div class="field"><label>Warranty MTD</label><input type="number" id="f_warrantyMTD" placeholder="33"></div>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;">Run rate, forecast, and stock turns are calculated automatically from Sold MTD and Total Stock — no need to enter them.</p>
+    </div>
+
+    <h2 class="section-title">Sales leaderboard</h2>
+    <div class="entry-card" style="margin-bottom:24px;">
+      <div class="rep-table-scroll">
+      <div class="rep-row head">
+        <div>Consultant</div><div>Sales rank</div><div># Sales</div><div>Del. rank</div><div># Del.</div>
+        <div>Fin. rank</div><div># Finance</div><div>Fin. %</div><div>Prior sales</div><div>Prior del.</div>
+      </div>
+      <div id="repRows"></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Yesterday's deals (optional detail)</h2>
+    <div class="entry-card" style="margin-bottom:24px;">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Paste rep / customer / unit / profit rows — this populates the deals table. Customer names are kept in your Google Sheet only and are never sent to the public dashboard.</p>
+      <textarea id="dealsRaw" rows="6" placeholder="Deal No, Rep, Customer, Unit, Stock, Discount, Status, Total Profit, Finance Status, Trade Value — one per line, comma-separated" style="width:100%;font-family:inherit;font-size:12.5px;padding:10px;border:1px solid var(--line);border-radius:7px;background:#FCFCFB;"></textarea>
+    </div>
+
+    <div class="entry-actions">
+      <button class="primary" id="saveEntry">Save entry</button>
+      <button class="secondary" id="clearForm">Clear form</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <span>Data stored in Google Sheets via Apps Script</span>
+  <span id="footStatus">Not connected</span>
+</footer>
+
+<script>
+/* ---------------- STORAGE LAYER ---------------- */
+const LS_KEY = 'apu_dashboard_v2';
+const LS_SCRIPT_URL = 'apu_dashboard_script_url';
+
+function loadLocal(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY)) || { entries: [], targets: defaultTargets() }; }
+  catch(e){ return { entries: [], targets: defaultTargets() }; }
+}
+function saveLocal(data){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+function defaultTargets(){
+  return { soldMTD: 150, financePen: 35, warrantyPen: 40, grossMTD: 75000 };
+}
+
+let STATE = loadLocal();
+let scriptUrl = localStorage.getItem(LS_SCRIPT_URL) || '';
+
+/* ---------------- TAB NAV ---------------- */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view==='mtd') renderMTD();
+    if(btn.dataset.view==='trend') renderTrend();
+  });
+});
+
+/* ---------------- CONNECT BANNER ---------------- */
+function renderConnectBanner(){
+  const el = document.getElementById('connectBanner');
+  if(!scriptUrl){
+    el.innerHTML = `<div class="status-banner warn">⚠️ Google Sheets not connected — data is only saved in this browser. <a href="#" id="connectLink">Connect now</a></div>`;
+    document.getElementById('connectLink').addEventListener('click', e=>{
+      e.preventDefault();
+      const url = prompt('Paste your Google Apps Script Web App URL:');
+      if(url){ scriptUrl = url.trim(); localStorage.setItem(LS_SCRIPT_URL, scriptUrl); renderConnectBanner(); document.getElementById('footStatus').textContent='Connected'; hydrateFromSheet(); }
+    });
+  } else {
+    el.innerHTML = `<div class="status-banner ok">✓ Connected to Google Sheets</div>`;
+    document.getElementById('footStatus').textContent = 'Connected';
+  }
+}
+
+/* ---------------- HELPERS ---------------- */
+function fmtMoney(n){
+  const sign = n<0 ? '-' : '';
+  return sign + '$' + Math.abs(Math.round(n)).toLocaleString();
+}
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-AU',{weekday:'short', day:'numeric', month:'short'});
+}
+function latestEntry(){
+  if(STATE.entries.length===0) return null;
+  return [...STATE.entries].sort((a,b)=>b.date.localeCompare(a.date))[0];
+}
+function entryByOffset(daysAgo){
+  const sorted = [...STATE.entries].sort((a,b)=>b.date.localeCompare(a.date));
+  return sorted[daysAgo] || null;
+}
+
+/* ---------------- TODAY VIEW ---------------- */
+function renderToday(){
+  const el = document.getElementById('todayContent');
+  const e = latestEntry();
+  if(!e){
+    el.innerHTML = `<div class="empty-state"><div class="big">No entries yet</div>Head to <strong>Daily Entry</strong> to add yesterday's End-of-Day figures.</div>`;
+    document.getElementById('lastUpdated').textContent = 'No data yet';
+    document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+    return;
+  }
+  document.getElementById('todayLabel').textContent = fmtDate(e.date);
+  document.getElementById('lastUpdated').textContent = 'Last updated ' + fmtDate(e.date);
+
+  const prev = entryByOffset(1);
+  const delta = (cur, prevVal)=>{
+    if(prevVal===undefined||prevVal===null) return '';
+    const d = cur - prevVal;
+    if(d===0) return `<div class="delta flat">— no change vs day before</div>`;
+    const cls = d>0 ? 'up':'down';
+    const arrow = d>0?'▲':'▼';
+    return `<div class="delta ${cls}">${arrow} ${Math.abs(d)} vs day before</div>`;
+  };
+
+  const r = e.recap || {};
+  const pr = prev ? prev.recap : {};
+
+  let html = `<h2 class="section-title">Yesterday's snapshot</h2>
+  <div class="recap-grid">
+    <div class="card"><div class="label">Sold yesterday</div><div class="value">${r.soldToday ?? '—'}</div>${delta(r.soldToday, pr.soldToday)}</div>
+    <div class="card"><div class="label">Gross yesterday</div><div class="value ${r.grossToday<0?'neg':'pos'}">${r.grossToday!==undefined?fmtMoney(r.grossToday):'—'}</div>${delta(r.grossToday, pr.grossToday)}</div>
+    <div class="card"><div class="label">Finance</div><div class="value">${r.financeToday ?? '—'}</div></div>
+    <div class="card"><div class="label">Warranty</div><div class="value">${r.warrantyToday ?? '—'}</div></div>
+    <div class="card"><div class="label">Trade-ins</div><div class="value">${r.tradeInToday ?? '—'}</div></div>
+    <div class="card"><div class="label">Stock (online/total)</div><div class="value" style="font-size:20px;">${r.online ?? '—'}/${r.totalStock ?? '—'}</div></div>
+  </div>
+
+  <h2 class="section-title">Month-to-date</h2>
+  <div class="recap-grid">
+    <div class="card"><div class="label">Sold MTD</div><div class="value">${r.soldMTD ?? '—'}</div></div>
+    <div class="card"><div class="label">Finance MTD</div><div class="value">${r.financeMTD ?? '—'}</div></div>
+    <div class="card"><div class="label">Warranty MTD</div><div class="value">${r.warrantyMTD ?? '—'}</div></div>
+    <div class="card"><div class="label">Run rate</div><div class="value">${r.runRate ?? '—'}</div></div>
+    <div class="card"><div class="label">Forecast</div><div class="value">${r.forecast ?? '—'}</div></div>
+    <div class="card"><div class="label">Stock turns</div><div class="value">${r.stockTurns ?? '—'}</div></div>
+  </div>
+
+  <h2 class="section-title">Sales leaderboard</h2>
+  <p class="scroll-hint" style="font-size:11.5px;color:var(--ink-soft);margin:-8px 0 10px;">Swipe to see all columns →</p>
+  ${renderLeaderboardTable(e.leaderboard||[])}
+
+  ${renderDealsSection(e.deals||[])}
+  `;
+  el.innerHTML = html;
+
+  const toggle = document.getElementById('dealsToggle');
+  if(toggle){
+    toggle.addEventListener('click', ()=>{
+      toggle.classList.toggle('open');
+      document.getElementById('dealsTableWrap').classList.toggle('open');
+    });
+  }
+}
+
+function rankBadge(rank){
+  if(!rank) return '<span class="rank-badge">—</span>';
+  const n = parseInt(rank);
+  let cls = '';
+  if(n===1) cls='r1'; else if(n===2) cls='r2'; else if(n===3) cls='r3';
+  return `<span class="rank-badge ${cls}">${rank}</span>`;
+}
+
+function renderLeaderboardTable(rows){
+  if(rows.length===0) return `<div class="table-wrap"><div class="empty-state">No leaderboard data for that day</div></div>`;
+  const sorted = [...rows].sort((a,b)=>(a.salesRank||99)-(b.salesRank||99));
+  let body = sorted.map(r=>`
+    <tr>
+      <td>${r.rep||''}</td>
+      <td class="num">${rankBadge(r.salesRank)}</td>
+      <td class="num">${r.sales??'—'}</td>
+      <td class="num">${rankBadge(r.deliveriesRank)}</td>
+      <td class="num">${r.deliveries??'—'}</td>
+      <td class="num">${rankBadge(r.financeRank)}</td>
+      <td class="num">${r.finance??'—'}</td>
+      <td class="num"><div class="pen-bar-wrap"><div class="pen-bar-track"><div class="pen-bar-fill" style="width:${Math.min(r.financePen||0,100)}%"></div></div>${r.financePen??0}%</div></td>
+      <td class="num">${r.priorSales??'—'}</td>
+      <td class="num">${r.priorDelivery??'—'}</td>
+    </tr>`).join('');
+  return `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Consultant</th><th class="num">Sales rank</th><th class="num"># Sales</th>
+      <th class="num">Del. rank</th><th class="num"># Del.</th><th class="num">Fin. rank</th>
+      <th class="num"># Finance</th><th class="num">Finance %</th><th class="num">Prior sales</th><th class="num">Prior del.</th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+  </table></div>`;
+}
+
+function renderDealsSection(deals){
+  if(deals.length===0) return '';
+  const totalProfit = deals.reduce((s,d)=>s+(parseFloat(d.totalProfit)||0),0);
+  let rows = deals.map(d=>`
+    <tr>
+      <td>${d.dealNo||''}</td><td>${d.rep||''}</td><td>${d.unit||''}</td>
+      <td>${d.stock||''}</td><td class="num">${d.discount??''}</td>
+      <td><span class="pill ${(d.status||'').toLowerCase().includes('alloc')?'allocated':'cash'}">${d.status||''}</span></td>
+      <td class="num">${d.totalProfit!==undefined?fmtMoney(parseFloat(d.totalProfit)):''}</td>
+      <td>${d.financeStatus||''}</td><td class="num">${d.tradeValue?fmtMoney(parseFloat(d.tradeValue)):''}</td>
+    </tr>`).join('');
+  return `
+  <h2 class="section-title">Yesterday's deals</h2>
+  <div class="deals-toggle" id="dealsToggle">
+    <div class="left"><span class="icon">🔒</span><div class="txt"><strong>${deals.length} ${deals.length===1?'deal':'deals'} · ${fmtMoney(totalProfit)} total profit</strong><span>Customer names withheld from this dashboard</span></div></div>
+    <span class="chev">▾</span>
+  </div>
+  <div id="dealsTableWrap"><div class="table-wrap"><table>
+    <thead><tr><th>Deal</th><th>Rep</th><th>Unit</th><th>Stock</th><th class="num">Discount</th><th>Status</th><th class="num">Profit</th><th>Finance</th><th class="num">Trade</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div></div>`;
+}
+
+/* ---------------- MTD VIEW ---------------- */
+function renderMTD(){
+  const e = latestEntry();
+  const strip = document.getElementById('mtdStrip');
+  const t = STATE.targets;
+  if(!e){ strip.innerHTML = `<div class="empty-state">No data yet</div>`; return; }
+  const r = e.recap||{};
+  const avgFinPen = (e.leaderboard&&e.leaderboard.length) ? Math.round(e.leaderboard.reduce((s,x)=>s+(x.financePen||0),0)/e.leaderboard.length) : 0;
+  const warrantyPenActual = r.warrantyMTD && r.soldMTD ? Math.round((r.warrantyMTD/r.soldMTD)*100) : 0;
+
+  // Contract count targets, derived from unit target x penetration target
+  // e.g. 150 units x 40% warranty penetration = 60 warranty contracts
+  const financeContractTarget = Math.round((t.soldMTD||0) * (t.financePen||0) / 100);
+  const warrantyContractTarget = Math.round((t.soldMTD||0) * (t.warrantyPen||0) / 100);
+
+  function barClass(pct){ return pct>=90?'ok':pct>=60?'warn':'bad'; }
+  function card(label, cur, target, suffix=''){
+    const pct = target? Math.round((cur/target)*100) : 0;
+    return `<div class="mtd-card">
+      <div class="label">${label}</div>
+      <div class="nums"><span class="cur">${cur}${suffix}</span><span class="tgt">/ ${target}${suffix} target</span></div>
+      <div class="bar-track"><div class="bar-fill ${barClass(pct)}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div class="pct">${pct}% of target</div>
+    </div>`;
+  }
+  strip.innerHTML = card('Sold MTD', r.soldMTD||0, t.soldMTD)
+    + card('Finance penetration', avgFinPen, t.financePen, '%')
+    + card('Warranty penetration', warrantyPenActual, t.warrantyPen, '%')
+    + card('Finance contracts', r.financeMTD||0, financeContractTarget)
+    + card('Warranty contracts', r.warrantyMTD||0, warrantyContractTarget);
+
+  const tf = document.getElementById('targetFields');
+  tf.innerHTML = `
+    <div class="field"><label>Sold MTD target</label><input type="number" id="t_soldMTD" value="${t.soldMTD}"></div>
+    <div class="field"><label>Finance penetration target %</label><input type="number" id="t_financePen" value="${t.financePen}"></div>
+    <div class="field"><label>Warranty penetration target %</label><input type="number" id="t_warrantyPen" value="${t.warrantyPen}"></div>
+    <div class="field"><label>Gross MTD target $</label><input type="number" id="t_grossMTD" value="${t.grossMTD}"></div>
+  `;
+  const hint = document.getElementById('targetDerivedHint');
+  if(hint) hint.textContent = `Finance contract target: ${financeContractTarget} · Warranty contract target: ${warrantyContractTarget} — calculated from Sold MTD target × penetration %`;
+}
+document.getElementById('saveTargets').addEventListener('click', ()=>{
+  STATE.targets = {
+    soldMTD: parseFloat(document.getElementById('t_soldMTD').value)||0,
+    financePen: parseFloat(document.getElementById('t_financePen').value)||0,
+    warrantyPen: parseFloat(document.getElementById('t_warrantyPen').value)||0,
+    grossMTD: parseFloat(document.getElementById('t_grossMTD').value)||0,
+  };
+  saveLocal(STATE);
+  renderMTD();
+});
+
+/* ---------------- TREND VIEW ---------------- */
+function renderTrend(){
+  const grid = document.getElementById('trendGrid');
+  const sorted = [...STATE.entries].sort((a,b)=>b.date.localeCompare(a.date));
+  if(sorted.length===0){ grid.innerHTML=`<div class="empty-state">No data yet</div>`; document.getElementById('chartHolder').innerHTML=''; return; }
+  const today = sorted[0], yesterday = sorted[1], weekAgo = sorted[7];
+
+  function diffRow(label, cur, prevVal){
+    if(prevVal===undefined||prevVal===null) return `<div class="row"><span class="k">${label}</span><span class="v">—</span></div>`;
+    const d = cur-prevVal;
+    const cls = d>0?'up':d<0?'down':'';
+    const sign = d>0?'+':'';
+    return `<div class="row"><span class="k">${label}</span><span class="v ${cls}">${sign}${d}</span></div>`;
+  }
+  function trendCard(title, field){
+    const cur = (today.recap||{})[field]??0;
+    const y = yesterday ? (yesterday.recap||{})[field] : null;
+    const w = weekAgo ? (weekAgo.recap||{})[field] : null;
+    return `<div class="trend-card"><div class="label">${title}</div>
+      ${diffRow('vs yesterday', cur, y)}
+      ${diffRow('vs 7 days ago', cur, w)}
+    </div>`;
+  }
+  grid.innerHTML = trendCard('Sold','soldToday') + trendCard('Gross $','grossToday') + trendCard('Finance','financeToday') + trendCard('Warranty','warrantyToday');
+
+  // simple line chart for soldToday, last 14 days
+  const points = [...sorted].slice(0,14).reverse();
+  const w=1100,h=220,pad=36;
+  const vals = points.map(p=>(p.recap||{}).soldToday||0);
+  const max = Math.max(...vals,1);
+  const stepX = points.length>1 ? (w-pad*2)/(points.length-1) : 0;
+  const coords = vals.map((v,i)=>{
+    const x = pad + i*stepX;
+    const y = h-pad - (v/max)*(h-pad*2);
+    return [x,y];
+  });
+  const pathD = coords.map((c,i)=>(i===0?'M':'L')+c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
+  const dots = coords.map((c,i)=>`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.5" fill="#EB0A1E"/>`).join('');
+  const labels = points.map((p,i)=>`<text x="${coords[i][0].toFixed(1)}" y="${h-10}" font-size="10" fill="#5B5D60" text-anchor="middle">${p.date.slice(5)}</text>`).join('');
+  document.getElementById('chartHolder').innerHTML = points.length<2
+    ? `<div class="empty-state">Need at least 2 days of data to chart a trend</div>`
+    : `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+        <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#E6E4DF"/>
+        <path d="${pathD}" fill="none" stroke="#EB0A1E" stroke-width="2.5"/>
+        ${dots}${labels}
+      </svg>`;
+}
+
+/* ---------------- ENTRY VIEW ---------------- */
+const REPS = ['Adem Varir','Kane Goodman','Ben Orgill','John Sekulovski','Molly O\'Rourke','Rebin Basheer'];
+function buildRepRows(existing){
+  const map = {};
+  (existing||[]).forEach(r=>map[r.rep]=r);
+  document.getElementById('repRows').innerHTML = REPS.map(name=>{
+    const r = map[name]||{};
+    const id = name.replace(/[^a-zA-Z]/g,'');
+    return `<div class="rep-row" data-rep="${name}">
+      <div class="name-cell">${name}</div>
+      <input type="number" placeholder="rank" value="${r.salesRank??''}" id="sr_${id}">
+      <input type="number" placeholder="0" value="${r.sales??''}" id="s_${id}">
+      <input type="number" placeholder="rank" value="${r.deliveriesRank??''}" id="dr_${id}">
+      <input type="number" placeholder="0" value="${r.deliveries??''}" id="d_${id}">
+      <input type="number" placeholder="rank" value="${r.financeRank??''}" id="fr_${id}">
+      <input type="number" placeholder="0" value="${r.finance??''}" id="f_${id}">
+      <input type="number" placeholder="0" value="${r.financePen??''}" id="fp_${id}">
+      <input type="number" placeholder="0" value="${r.priorSales??''}" id="ps_${id}">
+      <input type="number" placeholder="0" value="${r.priorDelivery??''}" id="pd_${id}">
+    </div>`;
+  }).join('');
+}
+buildRepRows([]);
+document.getElementById('f_date').valueAsDate = new Date();
+
+// If today's date already has a saved entry, load it for editing.
+// Otherwise leave the form blank — don't carry over yesterday's daily figures.
+function loadEntryIntoForm(date){
+  const existing = STATE.entries.find(e=>e.date===date);
+  document.querySelectorAll('#view-entry input[type="number"]').forEach(i=>i.value='');
+  document.getElementById('dealsRaw').value='';
+  buildRepRows([]);
+  if(existing){
+    const r = existing.recap||{};
+    Object.keys(r).forEach(k=>{
+      const el = document.getElementById('f_'+k);
+      if(el) el.value = r[k];
+    });
+    buildRepRows(existing.leaderboard||[]);
+    if(existing.deals && existing.deals.length){
+      document.getElementById('dealsRaw').value = existing.deals.map(d=>[d.dealNo,d.rep,d.customer,d.unit,d.stock,d.discount,d.status,d.totalProfit,d.financeStatus,d.tradeValue].join(', ')).join('\n');
+    }
+  }
+}
+document.getElementById('f_date').addEventListener('change', e=>loadEntryIntoForm(e.target.value));
+loadEntryIntoForm(document.getElementById('f_date').value);
+
+function parseDealsRaw(text){
+  return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+    const parts = line.split(',').map(s=>s.trim());
+    const [dealNo,rep,customer,unit,stock,discount,status,totalProfit,financeStatus,tradeValue] = parts;
+    return {dealNo,rep,customer,unit,stock,discount,status,totalProfit,financeStatus,tradeValue};
+  });
+}
+
+document.getElementById('saveEntry').addEventListener('click', async ()=>{
+  const date = document.getElementById('f_date').value;
+  if(!date){ alert('Please set a date'); return; }
+  const recap = {
+    soldToday: numOrU('f_soldToday'), grossToday: numOrU('f_grossToday'),
+    financeToday: numOrU('f_financeToday'), warrantyToday: numOrU('f_warrantyToday'),
+    tradeInToday: numOrU('f_tradeInToday'), online: numOrU('f_online'), totalStock: numOrU('f_totalStock'),
+    soldMTD: numOrU('f_soldMTD'), financeMTD: numOrU('f_financeMTD'), warrantyMTD: numOrU('f_warrantyMTD'),
+  };
+  const leaderboard = REPS.map(name=>{
+    const id = name.replace(/[^a-zA-Z]/g,'');
+    return {
+      rep:name, salesRank:numOrU('sr_'+id), sales:numOrU('s_'+id),
+      deliveriesRank:numOrU('dr_'+id), deliveries:numOrU('d_'+id),
+      financeRank:numOrU('fr_'+id), finance:numOrU('f_'+id),
+      financePen:numOrU('fp_'+id), priorSales:numOrU('ps_'+id), priorDelivery:numOrU('pd_'+id)
+    };
+  }).filter(r=>r.sales!==undefined || r.salesRank!==undefined);
+  const deals = parseDealsRaw(document.getElementById('dealsRaw').value);
+
+  const entry = {date, recap, leaderboard, deals};
+  STATE.entries = STATE.entries.filter(e=>e.date!==date);
+  STATE.entries.push(entry);
+  saveLocal(STATE);
+
+  if(scriptUrl){
+    try{
+      await fetch(scriptUrl, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({type:'entry', payload:entry})});
+    }catch(err){ console.error('Sheet sync failed', err); }
+  }
+  alert('Saved! Switch to the Yesterday tab to view.');
+  renderToday();
+});
+function numOrU(id){
+  const el = document.getElementById(id);
+  if(!el || el.value==='') return undefined;
+  return parseFloat(el.value);
+}
+document.getElementById('clearForm').addEventListener('click', ()=>{
+  document.querySelectorAll('#view-entry input').forEach(i=>{ if(i.type!=='date') i.value=''; });
+  document.getElementById('dealsRaw').value='';
+});
+
+/* ---------------- INIT ---------------- */
+renderConnectBanner();
+renderToday();
+
+async function hydrateFromSheet(){
+  if(!scriptUrl) return;
+  try{
+    const res = await fetch(scriptUrl);
+    const data = await res.json();
+    if(data && data.entries){
+      STATE.entries = data.entries;
+      STATE.targets = data.targets || STATE.targets;
+      saveLocal(STATE);
+      renderToday();
+      const activeTab = document.querySelector('nav.tabs button.active');
+      if(activeTab && activeTab.dataset.view==='mtd') renderMTD();
+      if(activeTab && activeTab.dataset.view==='trend') renderTrend();
+    }
+  }catch(err){ console.error('Hydrate failed', err); }
+}
+hydrateFromSheet();
+</script>
+</body>
+</html>
