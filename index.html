@@ -97,6 +97,14 @@
   .card .delta.down{color:var(--red);}
   .card .delta.flat{color:var(--ink-soft);}
 
+  /* AGED STOCK HIGHLIGHT */
+  .card.aged-highlight{
+    border-color:var(--amber);
+    background:var(--amber-soft);
+  }
+  .card.aged-highlight .label{color:var(--amber);}
+  .card.aged-highlight .value{color:var(--amber);}
+
   .mtd-strip{
     display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px;
   }
@@ -119,7 +127,7 @@
     background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
     overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:var(--shadow);margin-bottom:32px;
   }
-  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:680px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:780px;}
   thead tr{background:var(--charcoal);}
   thead th{
     color:#D8D9DB;font-weight:600;text-align:left;padding:11px 14px;
@@ -145,6 +153,12 @@
   .pen-bar-fill.bad{background:var(--red);}
   .pen-bar-fill.warn{background:var(--amber);}
   .pen-bar-fill.ok{background:var(--green);}
+  .aged-pill{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:24px;height:22px;border-radius:6px;font-size:11.5px;font-weight:700;
+    background:var(--amber-soft);color:var(--amber);padding:0 6px;
+  }
+  .aged-pill.zero{background:var(--line);color:var(--ink-soft);}
 
   /* TREND */
   .trend-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
@@ -175,7 +189,7 @@
   #dealsTableWrap.open{max-height:2000px;margin-top:10px;}
   .pill{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:600;}
   .pill.allocated{background:var(--red-soft);color:var(--red);}
-  .pill.cash{background:var(--ink-soft);background:#EEEEEE;color:var(--ink-soft);}
+  .pill.cash{background:#EEEEEE;color:var(--ink-soft);}
 
   /* DATA ENTRY */
   .entry-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);}
@@ -199,7 +213,7 @@
   button.primary:hover{background:#C8081A;}
   button.secondary:hover{background:#F2F1ED;}
   .rep-table-scroll{overflow-x:auto;padding-bottom:4px;}
-  .rep-row{display:grid;grid-template-columns:140px repeat(9,86px);gap:8px;margin-bottom:8px;align-items:center;width:max-content;min-width:100%;}
+  .rep-row{display:grid;grid-template-columns:140px repeat(10,86px);gap:8px;margin-bottom:8px;align-items:center;width:max-content;min-width:100%;}
   .rep-row.head{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:700;letter-spacing:.04em;}
   .rep-row input{padding:7px 8px;font-size:12.5px;width:100%;}
   .rep-row .name-cell{font-size:13px;font-weight:600;display:flex;align-items:center;}
@@ -287,7 +301,6 @@
 
   <div id="connectBanner"></div>
 
-
   <!-- TODAY VIEW -->
   <section class="view active" id="view-today">
     <div id="todayContent"></div>
@@ -331,8 +344,9 @@
         <div class="field"><label>Sold MTD</label><input type="number" id="f_soldMTD" placeholder="101"></div>
         <div class="field"><label>Finance MTD</label><input type="number" id="f_financeMTD" placeholder="38"></div>
         <div class="field"><label>Warranty MTD</label><input type="number" id="f_warrantyMTD" placeholder="33"></div>
+        <div class="field"><label>Aged Stock Sold Today</label><input type="number" id="f_agedToday" placeholder="2"></div>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;">Run rate, forecast, and stock turns are calculated automatically from Sold MTD and Total Stock — no need to enter them.</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;">Run rate, forecast, stock turns, and Aged Stock MTD are calculated automatically — no need to enter them.</p>
     </div>
 
     <h2 class="section-title">Sales leaderboard</h2>
@@ -340,7 +354,7 @@
       <div class="rep-table-scroll">
       <div class="rep-row head">
         <div>Consultant</div><div>Sales rank</div><div># Sales</div><div>Del. rank</div><div># Del.</div>
-        <div>Fin. rank</div><div># Finance</div><div>Fin. %</div><div>Prior sales</div><div>Prior del.</div>
+        <div>Fin. rank</div><div># Finance</div><div>Fin. %</div><div>Aged Sold</div><div>Prior sales</div><div>Prior del.</div>
       </div>
       <div id="repRows"></div>
       </div>
@@ -371,8 +385,6 @@
 /* ---------------- STORAGE LAYER ---------------- */
 const LS_KEY = 'apu_dashboard_v2';
 const LS_SCRIPT_URL = 'apu_dashboard_script_url';
-// Pre-connected so anyone who reaches the dashboard (past the passcode gate)
-// sees live data with no manual "Connect Google Sheets" step.
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8abOrwrLNsPao91yUkHnvMOdQeXd9O3N2NXtXascTpPJ6CmFNlKPN5cWHvNXhPXMo-w/exec';
 
 function loadLocal(){
@@ -422,20 +434,15 @@ function fmtMoney(n){
 }
 function fmtDate(d){
   if(!d) return '—';
-  // Normalize whatever format the Sheet handed back (plain 'YYYY-MM-DD' string,
-  // a full JS Date toString from Apps Script, or an ISO timestamp) into a Date.
   let dt;
   if(typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)){
     dt = new Date(d+'T00:00:00');
   } else {
     dt = new Date(d);
   }
-  if(isNaN(dt.getTime())) return String(d); // fall back to showing raw value rather than "Invalid Date"
+  if(isNaN(dt.getTime())) return String(d);
   return dt.toLocaleDateString('en-AU',{weekday:'short', day:'numeric', month:'short'});
 }
-// Normalizes any date value (string, Sheets Date object stringified, timestamp)
-// down to a clean 'YYYY-MM-DD' key, so date comparisons/sorts/lookups are reliable
-// regardless of how Google Sheets serialized the column.
 function normalizeDateKey(d){
   if(!d) return '';
   if(typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
@@ -489,6 +496,7 @@ function renderToday(){
     <div class="card"><div class="label">Warranty</div><div class="value">${r.warrantyToday ?? '—'}</div></div>
     <div class="card"><div class="label">Trade-ins</div><div class="value">${r.tradeInToday ?? '—'}</div></div>
     <div class="card"><div class="label">Stock (online/total)</div><div class="value" style="font-size:20px;">${r.online ?? '—'}/${r.totalStock ?? '—'}</div></div>
+    <div class="card aged-highlight"><div class="label">Aged Stock Sold Today</div><div class="value">${r.agedToday ?? 0}</div></div>
   </div>
 
   <h2 class="section-title">Month-to-date</h2>
@@ -499,6 +507,7 @@ function renderToday(){
     <div class="card"><div class="label">Run rate</div><div class="value">${r.runRate ?? '—'}</div></div>
     <div class="card"><div class="label">Forecast</div><div class="value">${r.forecast ?? '—'}</div></div>
     <div class="card"><div class="label">Stock turns</div><div class="value">${r.stockTurns ?? '—'}</div></div>
+    <div class="card aged-highlight"><div class="label">Aged Stock Sold MTD</div><div class="value">${r.agedMTD ?? 0}</div></div>
   </div>
 
   <h2 class="section-title">Sales leaderboard</h2>
@@ -519,19 +528,23 @@ function renderToday(){
 }
 
 function rankBadge(rank){
-  if(!rank) return '<span class="rank-badge">—</span>';
+  if(!rank && rank !== 0) return '<span class="rank-badge">—</span>';
   const n = parseInt(rank);
   let cls = '';
   if(n===1) cls='r1'; else if(n===2) cls='r2'; else if(n===3) cls='r3';
   return `<span class="rank-badge ${cls}">${rank}</span>`;
 }
 
-// Finance penetration colour thresholds: <25% red, 25-35% amber, >35% green
 function financePenClass(pct){
   const p = parseFloat(pct)||0;
   if(p > 35) return 'ok';
   if(p >= 25) return 'warn';
   return 'bad';
+}
+
+function agedBadge(n){
+  const val = parseInt(n) || 0;
+  return `<span class="aged-pill ${val===0?'zero':''}">${val}</span>`;
 }
 
 function renderLeaderboardTable(rows){
@@ -547,14 +560,23 @@ function renderLeaderboardTable(rows){
       <td class="num">${rankBadge(r.financeRank)}</td>
       <td class="num">${r.finance??'—'}</td>
       <td class="num"><div class="pen-bar-wrap"><div class="pen-bar-track"><div class="pen-bar-fill ${financePenClass(r.financePen)}" style="width:${Math.min(r.financePen||0,100)}%"></div></div>${r.financePen??0}%</div></td>
+      <td class="num">${agedBadge(r.agedSold)}</td>
       <td class="num">${r.priorSales??'—'}</td>
       <td class="num">${r.priorDelivery??'—'}</td>
     </tr>`).join('');
   return `<div class="table-wrap"><table>
     <thead><tr>
-      <th>Consultant</th><th class="num">Sales rank</th><th class="num"># Sales</th>
-      <th class="num">Del. rank</th><th class="num"># Del.</th><th class="num">Fin. rank</th>
-      <th class="num"># Finance</th><th class="num">Finance %</th><th class="num">Prior sales</th><th class="num">Prior del.</th>
+      <th>Consultant</th>
+      <th class="num">Sales rank</th>
+      <th class="num"># Sales</th>
+      <th class="num">Del. rank</th>
+      <th class="num"># Del.</th>
+      <th class="num">Fin. rank</th>
+      <th class="num"># Finance</th>
+      <th class="num">Finance %</th>
+      <th class="num">Aged Stock Sold</th>
+      <th class="num">Prior sales</th>
+      <th class="num">Prior del.</th>
     </tr></thead>
     <tbody>${body}</tbody>
   </table></div>`;
@@ -563,22 +585,33 @@ function renderLeaderboardTable(rows){
 function renderDealsSection(deals){
   if(deals.length===0) return '';
   const totalProfit = deals.reduce((s,d)=>s+(parseFloat(d.totalProfit)||0),0);
-  let rows = deals.map(d=>`
-    <tr>
+  const agedDeals = deals.filter(d=>parseInt(d.stockAge)>90).length;
+  let rows = deals.map(d=>{
+    const isAged = parseInt(d.stockAge) > 90;
+    return `
+    <tr${isAged?' style="background:var(--amber-soft);"':''}>
       <td>${d.dealNo||''}</td><td>${d.rep||''}</td><td>${d.unit||''}</td>
-      <td>${d.stock||''}</td><td class="num">${d.discount??''}</td>
+      <td>${d.stock||''}</td>
+      <td class="num">${d.stockAge??'—'}${isAged?' <span style="color:var(--amber);font-size:10px;font-weight:700;">AGED</span>':''}</td>
+      <td class="num">${d.discount??''}</td>
       <td><span class="pill ${(d.status||'').toLowerCase().includes('alloc')?'allocated':'cash'}">${d.status||''}</span></td>
       <td class="num">${d.totalProfit!==undefined?fmtMoney(parseFloat(d.totalProfit)):''}</td>
-      <td>${d.financeStatus||''}</td><td class="num">${d.tradeValue?fmtMoney(parseFloat(d.tradeValue)):''}</td>
-    </tr>`).join('');
+      <td>${d.financeStatus||''}</td>
+      <td class="num">${d.tradeValue?fmtMoney(parseFloat(d.tradeValue)):''}</td>
+    </tr>`;
+  }).join('');
   return `
   <h2 class="section-title">Yesterday's deals</h2>
   <div class="deals-toggle" id="dealsToggle">
-    <div class="left"><span class="icon">🔒</span><div class="txt"><strong>${deals.length} ${deals.length===1?'deal':'deals'} · ${fmtMoney(totalProfit)} total profit</strong><span>Customer names withheld from this dashboard</span></div></div>
+    <div class="left"><span class="icon">🔒</span><div class="txt"><strong>${deals.length} ${deals.length===1?'deal':'deals'} · ${fmtMoney(totalProfit)} total profit${agedDeals>0?' · '+agedDeals+' aged':''}</strong><span>Customer names withheld from this dashboard</span></div></div>
     <span class="chev">▾</span>
   </div>
   <div id="dealsTableWrap"><div class="table-wrap"><table>
-    <thead><tr><th>Deal</th><th>Rep</th><th>Unit</th><th>Stock</th><th class="num">Discount</th><th>Status</th><th class="num">Profit</th><th>Finance</th><th class="num">Trade</th></tr></thead>
+    <thead><tr>
+      <th>Deal</th><th>Rep</th><th>Unit</th><th>Stock</th>
+      <th class="num">Stock age</th><th class="num">Discount</th>
+      <th>Status</th><th class="num">Profit</th><th>Finance</th><th class="num">Trade</th>
+    </tr></thead>
     <tbody>${rows}</tbody>
   </table></div></div>`;
 }
@@ -593,8 +626,6 @@ function renderMTD(){
   const avgFinPen = (e.leaderboard&&e.leaderboard.length) ? Math.round(e.leaderboard.reduce((s,x)=>s+(x.financePen||0),0)/e.leaderboard.length) : 0;
   const warrantyPenActual = r.warrantyMTD && r.soldMTD ? Math.round((r.warrantyMTD/r.soldMTD)*100) : 0;
 
-  // Contract count targets, derived from unit target x penetration target
-  // e.g. 150 units x 40% warranty penetration = 60 warranty contracts
   const financeContractTarget = Math.round((t.soldMTD||0) * (t.financePen||0) / 100);
   const warrantyContractTarget = Math.round((t.soldMTD||0) * (t.warrantyPen||0) / 100);
 
@@ -608,11 +639,18 @@ function renderMTD(){
       <div class="pct">${pct}% of target</div>
     </div>`;
   }
+  function agedCard(label, cur){
+    return `<div class="mtd-card" style="border-color:var(--amber);background:var(--amber-soft);">
+      <div class="label" style="color:var(--amber);">${label}</div>
+      <div class="nums"><span class="cur" style="color:var(--amber);">${cur}</span><span class="tgt">units cleared this month</span></div>
+    </div>`;
+  }
   strip.innerHTML = card('Sold MTD', r.soldMTD||0, t.soldMTD)
     + card('Finance penetration', avgFinPen, t.financePen, '%')
     + card('Warranty penetration', warrantyPenActual, t.warrantyPen, '%')
     + card('Finance contracts', r.financeMTD||0, financeContractTarget)
-    + card('Warranty contracts', r.warrantyMTD||0, warrantyContractTarget);
+    + card('Warranty contracts', r.warrantyMTD||0, warrantyContractTarget)
+    + agedCard('Aged Stock Sold MTD', r.agedMTD||0);
 
   const tf = document.getElementById('targetFields');
   tf.innerHTML = `
@@ -658,9 +696,12 @@ function renderTrend(){
       ${diffRow('vs 7 days ago', cur, w)}
     </div>`;
   }
-  grid.innerHTML = trendCard('Sold','soldToday') + trendCard('Gross $','grossToday') + trendCard('Finance','financeToday') + trendCard('Warranty','warrantyToday');
+  grid.innerHTML = trendCard('Sold','soldToday')
+    + trendCard('Gross $','grossToday')
+    + trendCard('Finance','financeToday')
+    + trendCard('Aged Stock Sold','agedToday');
 
-  // simple line chart for soldToday, last 14 days
+  // Line chart for soldToday, last 14 days
   const points = [...sorted].slice(0,14).reverse();
   const w=1100,h=220,pad=36;
   const vals = points.map(p=>(p.recap||{}).soldToday||0);
@@ -700,6 +741,7 @@ function buildRepRows(existing){
       <input type="number" placeholder="rank" value="${r.financeRank??''}" id="fr_${id}">
       <input type="number" placeholder="0" value="${r.finance??''}" id="f_${id}">
       <input type="number" placeholder="0" value="${r.financePen??''}" id="fp_${id}">
+      <input type="number" placeholder="0" value="${r.agedSold??''}" id="ag_${id}">
       <input type="number" placeholder="0" value="${r.priorSales??''}" id="ps_${id}">
       <input type="number" placeholder="0" value="${r.priorDelivery??''}" id="pd_${id}">
     </div>`;
@@ -708,8 +750,6 @@ function buildRepRows(existing){
 buildRepRows([]);
 document.getElementById('f_date').valueAsDate = new Date();
 
-// If today's date already has a saved entry, load it for editing.
-// Otherwise leave the form blank — don't carry over yesterday's daily figures.
 function loadEntryIntoForm(date){
   const existing = STATE.entries.find(e=>e.date===date);
   document.querySelectorAll('#view-entry input[type="number"]').forEach(i=>i.value='');
@@ -723,7 +763,7 @@ function loadEntryIntoForm(date){
     });
     buildRepRows(existing.leaderboard||[]);
     if(existing.deals && existing.deals.length){
-      document.getElementById('dealsRaw').value = existing.deals.map(d=>[d.dealNo,d.rep,d.customer,d.unit,d.stock,d.discount,d.status,d.totalProfit,d.financeStatus,d.tradeValue].join(', ')).join('\n');
+      document.getElementById('dealsRaw').value = existing.deals.map(d=>[d.dealNo,d.rep,d.customer,d.unit,d.stock,d.stockAge,d.discount,d.status,d.totalProfit,d.financeStatus,d.tradeValue].join(', ')).join('\n');
     }
   }
 }
@@ -733,8 +773,8 @@ loadEntryIntoForm(document.getElementById('f_date').value);
 function parseDealsRaw(text){
   return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
     const parts = line.split(',').map(s=>s.trim());
-    const [dealNo,rep,customer,unit,stock,discount,status,totalProfit,financeStatus,tradeValue] = parts;
-    return {dealNo,rep,customer,unit,stock,discount,status,totalProfit,financeStatus,tradeValue};
+    const [dealNo,rep,customer,unit,stock,stockAge,discount,status,totalProfit,financeStatus,tradeValue] = parts;
+    return {dealNo,rep,customer,unit,stock,stockAge,discount,status,totalProfit,financeStatus,tradeValue};
   });
 }
 
@@ -746,6 +786,7 @@ document.getElementById('saveEntry').addEventListener('click', async ()=>{
     financeToday: numOrU('f_financeToday'), warrantyToday: numOrU('f_warrantyToday'),
     tradeInToday: numOrU('f_tradeInToday'), online: numOrU('f_online'), totalStock: numOrU('f_totalStock'),
     soldMTD: numOrU('f_soldMTD'), financeMTD: numOrU('f_financeMTD'), warrantyMTD: numOrU('f_warrantyMTD'),
+    agedToday: numOrU('f_agedToday'),
   };
   const leaderboard = REPS.map(name=>{
     const id = name.replace(/[^a-zA-Z]/g,'');
@@ -753,7 +794,8 @@ document.getElementById('saveEntry').addEventListener('click', async ()=>{
       rep:name, salesRank:numOrU('sr_'+id), sales:numOrU('s_'+id),
       deliveriesRank:numOrU('dr_'+id), deliveries:numOrU('d_'+id),
       financeRank:numOrU('fr_'+id), finance:numOrU('f_'+id),
-      financePen:numOrU('fp_'+id), priorSales:numOrU('ps_'+id), priorDelivery:numOrU('pd_'+id)
+      financePen:numOrU('fp_'+id), agedSold:numOrU('ag_'+id),
+      priorSales:numOrU('ps_'+id), priorDelivery:numOrU('pd_'+id)
     };
   }).filter(r=>r.sales!==undefined || r.salesRank!==undefined);
   const deals = parseDealsRaw(document.getElementById('dealsRaw').value);
@@ -782,18 +824,12 @@ document.getElementById('clearForm').addEventListener('click', ()=>{
 });
 
 /* ---------------- INIT ---------------- */
-// Gated behind passcode — see initApp() below, called only after success.
-
 async function hydrateFromSheet(){
   if(!scriptUrl) return;
   try{
     const res = await fetch(scriptUrl);
     const data = await res.json();
     if(data && data.entries){
-      // Force every entry's date into a clean 'YYYY-MM-DD' key, regardless of
-      // how Google Sheets serialized the date column (Date object, timestamp
-      // string, etc). Without this, sorting/comparison/chart logic downstream
-      // can silently break or show "Invalid Date".
       STATE.entries = data.entries.map(e=>Object.assign({}, e, {date: normalizeDateKey(e.date)}));
       STATE.targets = data.targets || STATE.targets;
       saveLocal(STATE);
@@ -813,12 +849,7 @@ function initApp(){
   hydrateFromSheet();
 }
 
-/* ---------------- PASSCODE GATE ----------------
- * Note: this is a lightweight speed bump, not real security. The passcode
- * lives in this file's source, so anyone who views page source can find it.
- * It just stops casual link-clicks / search indexing from showing live
- * sales data, it isn't a substitute for proper access control.
- */
+/* ---------------- PASSCODE GATE ---------------- */
 const GATE_PASSCODE = 'DataDash123!';
 const GATE_SESSION_KEY = 'apu_dashboard_gate_ok';
 
@@ -840,7 +871,6 @@ document.getElementById('gateInput').addEventListener('keydown', e=>{
   if(e.key === 'Enter') tryGate();
 });
 
-// Skip the gate if already entered this browser session (avoids re-prompting on tab refresh)
 if(sessionStorage.getItem(GATE_SESSION_KEY) === '1'){
   initApp();
 } else {
