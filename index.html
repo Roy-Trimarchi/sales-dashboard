@@ -344,7 +344,7 @@
         <div class="field"><label>Sold MTD</label><input type="number" id="f_soldMTD" placeholder="101"></div>
         <div class="field"><label>Finance MTD</label><input type="number" id="f_financeMTD" placeholder="38"></div>
         <div class="field"><label>Warranty MTD</label><input type="number" id="f_warrantyMTD" placeholder="33"></div>
-        <div class="field"><label>Aged Stock Sold Today</label><input type="number" id="f_agedToday" placeholder="2"></div>
+        <div class="field"><label>Aged Stock Sold Yesterday</label><input type="number" id="f_agedToday" placeholder="2"></div>
       </div>
       <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;">Run rate, forecast, stock turns, and Aged Stock MTD are calculated automatically — no need to enter them.</p>
     </div>
@@ -496,7 +496,7 @@ function renderToday(){
     <div class="card"><div class="label">Warranty</div><div class="value">${r.warrantyToday ?? '—'}</div></div>
     <div class="card"><div class="label">Trade-ins</div><div class="value">${r.tradeInToday ?? '—'}</div></div>
     <div class="card"><div class="label">Stock (online/total)</div><div class="value" style="font-size:20px;">${r.online ?? '—'}/${r.totalStock ?? '—'}</div></div>
-    <div class="card aged-highlight"><div class="label">Aged Stock Sold Today</div><div class="value">${r.agedToday ?? 0}</div></div>
+    <div class="card aged-highlight"><div class="label">Aged Stock Sold Yesterday</div><div class="value">${r.agedToday ?? 0}</div></div>
   </div>
 
   <h2 class="section-title">Month-to-date</h2>
